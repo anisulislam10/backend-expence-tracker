@@ -1,20 +1,37 @@
-// app.js
-const express = require('express');
+const express = require('express')
 const cors = require('cors');
 const { db } = require('./db/db');
-const { readdirSync } = require('fs');
-const serverless = require('serverless-http'); // ✅ Import this
+const {readdirSync} = require('fs')
+const app = express()
 
-require('dotenv').config();
+require('dotenv').config()
 
-const app = express();
+//middlewares
+app.use(express.json())
+app.use(cors())
 
-app.use(express.json());
-app.use(cors());
+//routes
+readdirSync('./routes').map((route) => app.use('/api/v1', require('./routes/' + route)))
 
-// Load all routes
-readdirSync('./routes').map((route) => app.use('/api/v1', require('./routes/' + route)));
+// Database connection and server start
+const startServer = async () => {
+    try {
+        await db();
+        console.log('Database connected successfully');
+    } catch (error) {
+        console.error('Database connection failed', error);
+    }
+};
 
-db(); // ✅ DB connected
+// Export the Express app for Vercel
+module.exports = app;
 
-module.exports = serverless(app); // ✅ Wrap and export
+// Start the server only when not in Vercel's serverless environment
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    startServer().then(() => {
+        app.listen(PORT, () => {
+            console.log('Server listening on port:', PORT);
+        });
+    });
+}
