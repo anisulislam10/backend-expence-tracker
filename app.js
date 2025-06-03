@@ -11,5 +11,6 @@ app.use(cors());
 
 // Load all routes
 readdirSync('./routes').map((route) => app.use('/api/v1', require('./routes/' + route)));
+db();
 
 module.exports = serverless(app);
