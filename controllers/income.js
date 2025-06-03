@@ -29,13 +29,36 @@ exports.addIncome = async (req, res) => {
     console.log(income)
 }
 
-exports.getIncomes = async (req, res) =>{
-    try {
-        const incomes = await IncomeSchema.find().sort({createdAt: -1})
-        res.status(200).json(incomes)
-    } catch (error) {
-        res.status(500).json({message: 'Server Error'})
-    }
+exports.getIncomes = async (req, res) => {
+  try {
+    console.time('IncomeQuery'); // Start timer
+    
+    // Add pagination and limits
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const skip = (page - 1) * limit;
+
+    // Optimized query with field selection and lean()
+    const incomes = await IncomeSchema.find()
+      .select('-__v') // Exclude version key
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(); // Convert to plain JS objects
+
+    console.timeEnd('IncomeQuery'); // End timer
+    
+    // Add caching headers
+    res.set('Cache-Control', 'public, max-age=60');
+    res.status(200).json(incomes);
+    
+  } catch (error) {
+    console.error('Error fetching incomes:', error);
+    res.status(500).json({ 
+      message: 'Server Error',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
 }
 
 exports.deleteIncome = async (req, res) =>{
